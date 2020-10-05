@@ -105,6 +105,6 @@ defmodule Util do
     b = cos(p2)*sin(l2-l1)
     n = :math.sqrt(a*a+b*b)
     d = sin(p1)*sin(p2) + cos(p1)*cos(p2)*cos(l2-l1)
-    :math.atan2(n, d) * 3959.0
+    :math.atan2(n, d) * (360*60/:math.pi()/2)
   end
 end
