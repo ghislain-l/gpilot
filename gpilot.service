@@ -1,0 +1,17 @@
+[Unit]
+Description=NavSim helper GUI
+After=network.target
+
+[Service]
+Type=simple
+TimeoutSec=60
+Restart=always
+RestartSec=30
+
+Environment= HOME=/opt/gpilot
+Environment= MIX_ENV=prod
+WorkingDirectory =/opt/gpilot
+ExecStart = /usr/bin/mix run --no-halt
+
+[Install]
+WantedBy=multi-user.target
