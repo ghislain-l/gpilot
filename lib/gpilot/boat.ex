@@ -125,7 +125,7 @@ defmodule Gpilot.Boat do
 
   @impl GenServer
   def handle_info(:query_status, state) do
-    Process.send_after(self(), :query_status, 1000*(61+:rand.uniform(5)-DateTime.utc_now().second))
+    Process.send_after(self(), :query_status, 1000*(54+:rand.uniform(11)))
     new_status = get_new_status(state.key)
     if is_nil(state.boat_type) && not is_nil(new_status["race"]) do
       send(self(), :query_race)
