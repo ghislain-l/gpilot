@@ -92,7 +92,7 @@ defmodule Gpilot.Web.Boat do
   defp render_waypoints(status, key) do
     waypoints =
       [
-        render_waypoint_list(status["speedGround"] |> Util.ms_to_kts(), {status["lat"], status["lon"]}, 0, status[:autopilot][:waypoints]),
+        render_waypoint_list(status["speedGround"] |> Util.ms_to_kts(), {status["lat"], status["lon"]}, 0, 0, status[:autopilot][:waypoints]),
         Html.input([{"type", "submit"},{"value", "Set waypoints"}]),
       ]
       |> Html.div()
@@ -136,14 +136,26 @@ defmodule Gpilot.Web.Boat do
     |> Html.div()
   end
 
-  defp render_waypoint_list(sog, current, index, waypoints_list, acc\\[])
-  defp render_waypoint_list(sog, current={_c_lat,_c_lon}, i, [next={lat,lon}| rest], acc) do
+  defp render_waypoint_list(sog, current, index, total_t, waypoints_list, acc\\[])
+  defp render_waypoint_list(sog, current={_c_lat,_c_lon}, i, total_t, [next={lat,lon}| rest], acc) do
     heading  = Util.get_course(current, next)
     distance = Util.get_distance(current, next)
     duration =
       if sog > 1.0 do
         t = distance/sog
         Util.show_duration(t)
+      else
+        ""
+      end
+    total_t =
+      if sog > 1.0 do
+        total_t + distance/sog
+      else
+        total_t
+      end
+    timestring =
+      if sog > 1.0 do
+        Util.show_utc_datetime(total_t)
       else
         ""
       end
@@ -154,15 +166,17 @@ defmodule Gpilot.Web.Boat do
         "#{round(heading)}&#176;",
         "#{Float.round(distance,1)}nm",
         duration,
+        "[#{timestring}]",
         Html.button("x", [{"onclick", "erase_waypoint(#{i});"}])
       ]
-    render_waypoint_list(sog, next, i+1, rest, [line | acc])
+    render_waypoint_list(sog, next, i+1, total_t, rest, [line | acc])
   end
-  defp render_waypoint_list(_, _, i, [], acc) do
+  defp render_waypoint_list(_, _, i, _, [], acc) do
     l =
       [
         Html.input([{"size", "8"}, {"id", "w_lat_#{i}"}, {"name", "lat_#{i}"}, {"value", ""}]),
         Html.input([{"size", "8"}, {"id", "w_lon_#{i}"}, {"name", "lon_#{i}"}, {"value", ""}]),
+        "",
         "",
         "",
         "",
