@@ -63,6 +63,15 @@ defmodule Util do
   end
 
   @doc """
+  Convert to a string representation of t hours after current date/time
+  """
+  def show_utc_datetime(t) do
+    dt = DateTime.utc_now()
+    dt = DateTime.add(dt, Kernel.trunc(t * 3600))
+    "#{dt.year}-#{to_string(dt.month) |> String.pad_leading(2, "0")}-#{to_string(dt.day) |> String.pad_leading(2, "0")} #{to_string(dt.hour) |> String.pad_leading(2, "0")}:#{to_string(dt.minute) |> String.pad_leading(2, "0")} UTC"
+  end
+
+  @doc """
   sin with degree input
   """
   def sin(a) do
