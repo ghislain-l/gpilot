@@ -2,7 +2,9 @@
 
 Help you play the naval simulation at https://8bitbyte.ca/sailnavsim
 
-Tested on a debian with Elixir 1.7 and 1.9, and Erlang 21 and 22
+Tested on a debian with Elixir 1.9, and Erlang 21, 22 and 23
+
+![Screenshot](screenshot.png)
 
 ## Install
 
