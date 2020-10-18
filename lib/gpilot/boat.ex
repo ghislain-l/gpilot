@@ -60,6 +60,7 @@ defmodule Gpilot.Boat do
       waypoints: [],
       autopilot: nil, # nil, :waypoints, :wind
       wind_angle: 90.0,
+      waypoint_ref: nil,
     ]
   end
 
@@ -96,7 +97,8 @@ defmodule Gpilot.Boat do
   def handle_cast({:set_waypoints, waypoints}, state) do
     if validate_waypoints(waypoints) do
       {:noreply, %State{state|
-        waypoints: waypoints
+        waypoints: waypoints,
+        waypoint_ref: nil,
       }
       |> save()
       |> run_autopilot()
@@ -140,6 +142,21 @@ defmodule Gpilot.Boat do
     {:noreply, %State{state|
       boat_type: get_boat_type(state.status["race"])
     }}
+  end
+  def handle_info({:next_waypoint_time, t}, state) do
+    ref = make_ref()
+    now = DateTime.utc_now() |> DateTime.to_unix()
+    Process.send_after(self(), {:next_waypoint, ref}, max(0, round((t-now)*1000)))
+    {:noreply, %State{state|
+      waypoint_ref: ref
+    }}
+  end
+  def handle_info({:next_waypoint, ref}, state) do
+    # only change if this is the last ref
+    if ref == state.waypoint_ref and state.autopilot do
+      Gpilot.Boat.set_waypoints(state.key, Enum.drop(state.waypoints, 1))
+    end
+    {:noreply, state}
   end
 
   # internals
@@ -200,15 +217,17 @@ defmodule Gpilot.Boat do
           if is_number(state.wind_angle) do
             Util.normalize_angle(state.wind_angle + state.status["windDir"])
           end
-        {:waypoints, [target={_lat,_lon}|tail]} ->
+        {:waypoints, [target={_lat,_lon}|_tail]} ->
           current = {state.status["lat"], state.status["lon"]}
-          if Util.get_distance(current, target) < 0.5 do
-            Gpilot.Boat.set_waypoints(state.key, tail)
-            nil
-          else
-            desired_course = Util.get_course(current, target)
-            Util.normalize_angle(desired_course - (state.status["trackGround"]-state.status["courseWater"]))
+          report_time = state.status["time"]
+          distance_to_waypoint = Util.get_distance(current, target)
+          speed_to_waypoint = state.status["speedGround"] |> Util.ms_to_kts()
+          if speed_to_waypoint/60*5 > distance_to_waypoint do # next waypoint in less than 5 minutes after report
+            time_of_turn = report_time + 3600*(distance_to_waypoint/speed_to_waypoint)
+            send(self(), {:next_waypoint_time, time_of_turn})
           end
+          desired_course = Util.get_course(current, target)
+          Util.normalize_angle(desired_course - (state.status["trackGround"]-state.status["courseWater"]))
         _ ->
           nil
       end
