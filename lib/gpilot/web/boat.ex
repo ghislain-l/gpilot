@@ -62,7 +62,13 @@ defmodule Gpilot.Web.Boat do
     [
       [Html.b("Position"), "#{Float.round(status["lat"],4)}&#176;,#{Float.round(status["lon"],4)}&#176;"],
       [Html.b("Wind"),     "#{round(status["windDir"])}&#176; @ #{status["windSpeed"] |> Util.ms_to_kts()} kts with #{Html.b("gust")} @ #{status["windGust"] |> Util.ms_to_kts()} kts"],
-      [Html.b("Current"),  "#{round(status["oceanCurrentDir"])}&#176; @ #{status["oceanCurrentSpeed"] |> Util.ms_to_kts()} kts"],
+      [Html.b("Current"),
+        (if status["oceanCurrentDir"] && status["oceanCurrentSpeed"] do
+          "#{round(status["oceanCurrentDir"])}&#176; @ #{status["oceanCurrentSpeed"] |> Util.ms_to_kts()} kts"
+        else
+          "N/A"
+        end)
+      ],
       [Html.b("SOW"),      "#{status["courseWater"]}&#176; @ #{status["speedWater"] |> Util.ms_to_kts()} kts"],
       [Html.b("SOG"),      "#{round(status["trackGround"])}&#176; @ #{status["speedGround"] |> Util.ms_to_kts()} kts"],
     ]
