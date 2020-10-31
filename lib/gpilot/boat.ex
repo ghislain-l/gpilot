@@ -18,7 +18,6 @@ defmodule Gpilot.Boat do
   @race_url   "https://8bitbyte.ca/sailnavsim/api/raceinfo.php?id="
   @action_url "https://8bitbyte.ca/sailnavsim/?key="
 
-
   def start_link(key) do
     GenServer.start_link(__MODULE__, key, [name: boat_name(key)])
   end
@@ -58,6 +57,9 @@ defmodule Gpilot.Boat do
       status: %{},
       boat_type: nil,
       waypoints: [],
+      waypoints_lateral_deviation: 0.0, # in m
+      waypoints_max_lateral_deviation: Util.nm_to_m(10.0), # in m
+      autopilot_wind_exclusion: 45.0, # minimum angle to the wind when following waypoints (beat angle)
       autopilot: nil, # nil, :waypoints, :wind
       wind_angle: 90.0,
       waypoint_ref: nil,
@@ -73,9 +75,10 @@ defmodule Gpilot.Boat do
       waypoints:  Map.get(data, :waypoints, []),
       autopilot:  Map.get(data, :autopilot, nil),
       wind_angle: Map.get(data, :wind_angle, 90.0),
+      autopilot_wind_exclusion: Map.get(data, :autopilot_wind_exclusion, 45.0),
+      waypoints_max_lateral_deviation: Map.get(data, :waypoints_max_lateral_deviation, Util.nm_to_m(10.0)),
     }}
   end
-
 
   @impl GenServer
   def handle_call(:get, _from, state) do
@@ -86,10 +89,14 @@ defmodule Gpilot.Boat do
         waypoints:  state.waypoints,
         mode:       state.autopilot,
         wind_angle: state.wind_angle,
+        autopilot_wind_exclusion: state.autopilot_wind_exclusion,
+        waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
         })
     {:reply, ret, state}
   end
   def handle_call({:change_course, course}, _from, state) do
+    course
+    |> trace("changing course")
     {:reply, post_request(state.key, "course", "#{Util.normalize_angle(course)}"), state}
   end
 
@@ -98,6 +105,7 @@ defmodule Gpilot.Boat do
     if validate_waypoints(waypoints) do
       {:noreply, %State{state|
         waypoints: waypoints,
+        waypoints_lateral_deviation: 0.0,
         waypoint_ref: nil,
       }
       |> save()
@@ -109,10 +117,13 @@ defmodule Gpilot.Boat do
   end
   def handle_cast({:set_autopilot, params}, state) do
     case validate_autopilot(params) do
-      {:ok, mode, angle} ->
+      {:ok, mode, angle, beat_angle, max_dev} ->
         {:noreply, %State{state|
           autopilot:  mode,
           wind_angle: angle,
+          waypoints_max_lateral_deviation: Util.nm_to_m(max_dev),
+          autopilot_wind_exclusion: beat_angle,
+          waypoints_lateral_deviation: 0.0,
         }
         |> save()
         |> run_autopilot()
@@ -205,34 +216,72 @@ defmodule Gpilot.Boat do
     case :httpc.request(:post, {url, [], 'application/x-www-form-urlencoded', body}, [], []) do
       {:ok, {{_, 200,_},_,_}} ->
         :ok
-      _ ->
+      other ->
+        other
+        |> trace("error posting request")
         :error
     end
   end
 
   defp run_autopilot(state) do
-    new_course =
-      case {state.autopilot, state.waypoints} do
-        {:wind,_} ->
-          if is_number(state.wind_angle) do
-            Util.normalize_angle(state.wind_angle + state.status["windDir"])
+    case {state.autopilot, state.waypoints} do
+      {:wind,_} ->
+        if is_number(state.wind_angle) do
+          state
+          |> maybe_change_course(state.wind_angle + state.status["windDir"])
+        end
+      {:waypoints, [target={_lat,_lon}|_tail]} ->
+        # estimate when to turn to next waypoint (assume a direct course)
+        current = {state.status["lat"], state.status["lon"]}
+        report_time = state.status["time"]
+        course_to_waypoint   = Util.get_course(current, target)
+        distance_to_waypoint = Util.get_distance(current, target)
+        speed_to_waypoint = state.status["speedGround"] |> Util.ms_to_kts()
+        if speed_to_waypoint/60*5 > distance_to_waypoint do # next waypoint in less than 5 minutes after report
+          time_of_turn = report_time + 3600*(distance_to_waypoint/speed_to_waypoint)
+          send(self(), {:next_waypoint_time, time_of_turn})
+        end
+        # update the deviation integral
+        lateral_deviation = state.waypoints_lateral_deviation + 60*Util.sin(state.status["trackGround"]-course_to_waypoint)*state.status["speedGround"]
+        # find the best course to the waypoint
+        desired_course = course_to_waypoint - (state.status["trackGround"]-state.status["courseWater"])
+        # exclusion zone
+        left  = state.status["windDir"] - state.autopilot_wind_exclusion
+        right = state.status["windDir"] + state.autopilot_wind_exclusion
+        going_right? = Util.sin( state.status["courseWater"] - course_to_waypoint) > 0
+        new_course =
+          cond do
+            # can go directly to waypoint
+            not Util.angle_in_interval?([left, right], desired_course) ->
+              desired_course
+            # must tack according to wind
+            lateral_deviation > state.waypoints_max_lateral_deviation ->
+              # too much to the right
+              left
+            lateral_deviation < -state.waypoints_max_lateral_deviation ->
+              # too much to the left
+              right
+            true ->
+              # continue on a heading closest to what we are now
+              if going_right? do
+                right
+              else
+                left
+              end
           end
-        {:waypoints, [target={_lat,_lon}|_tail]} ->
-          current = {state.status["lat"], state.status["lon"]}
-          report_time = state.status["time"]
-          distance_to_waypoint = Util.get_distance(current, target)
-          speed_to_waypoint = state.status["speedGround"] |> Util.ms_to_kts()
-          if speed_to_waypoint/60*5 > distance_to_waypoint do # next waypoint in less than 5 minutes after report
-            time_of_turn = report_time + 3600*(distance_to_waypoint/speed_to_waypoint)
-            send(self(), {:next_waypoint_time, time_of_turn})
-          end
-          desired_course = Util.get_course(current, target)
-          Util.normalize_angle(desired_course - (state.status["trackGround"]-state.status["courseWater"]))
-        _ ->
-          nil
-      end
+        %State{state|
+          waypoints_lateral_deviation: lateral_deviation
+        }
+        |> trace("autopilot waypoint")
+        |> maybe_change_course(new_course)
+      _ ->
+        state
+    end
+  end
+
+  defp maybe_change_course(state, new_course) do
     if is_number(new_course) do
-      new_course = round(new_course)
+      new_course = round(Util.normalize_angle(new_course))
       if new_course != state.status["courseWater"] do
         spawn(fn ->
           change_course(state.key, new_course)
@@ -248,6 +297,8 @@ defmodule Gpilot.Boat do
         waypoints: state.waypoints,
         autopilot: state.autopilot,
         wind_angle: state.wind_angle,
+        autopilot_wind_exclusion: state.autopilot_wind_exclusion,
+        waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
       }
     Gpilot.Store.set_boat(state.key, data)
     state
@@ -270,11 +321,18 @@ defmodule Gpilot.Boat do
         "waypoints" -> :waypoints
         _ -> nil
       end
-    case Float.parse(Map.get(map, "windangle", "")) do
-      {a,""} ->
-        {:ok, m,a}
+    ["windangle", "beatangle", "maxdev"]
+    |> Enum.map(&(Map.get(map, &1, "") |> Float.parse()))
+    |> case do
+      [{wa,""},{ba,""},{md,""}] ->
+        {:ok, m, wa, ba, md}
       _ ->
         :error
     end
+  end
+
+  defp trace(data, label) do
+    data
+    #|> IO.inspect(label: label)
   end
 end

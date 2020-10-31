@@ -29,6 +29,13 @@ defmodule Util do
   end
 
   @doc """
+  Convert nautical mile to meter
+  """
+  def nm_to_m(distance) do
+    distance * 1852.0
+  end
+
+  @doc """
   Normalize angles (in degree) into the range 0..360 inclusive
   """
   def normalize_angle(a) do
@@ -39,6 +46,21 @@ defmodule Util do
         normalize_angle(a-360.0)
       true ->
         a
+    end
+  end
+
+  @doc """
+  Check if an angle is in an interval
+  Renormalize the angles before checking
+  """
+  def angle_in_interval?([left, right], test) do
+    l = normalize_angle(left)
+    r = normalize_angle(right)
+    t = normalize_angle(test)
+    if l <= r do
+      l <= t && t <= r
+    else
+      l <= t || t <= r
     end
   end
 

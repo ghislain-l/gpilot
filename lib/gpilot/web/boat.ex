@@ -119,6 +119,9 @@ defmodule Gpilot.Web.Boat do
         Html.input(checkbox_attrs.("wind",      status[:autopilot][:mode] == :wind)),      "Wind",
         " angle:",Html.input([{"type", "number"},{"id", "windangle"}, {"name", "windangle"},{"value",status[:autopilot][:wind_angle]}]) <> "&#176;", Html.br(),
         Html.input(checkbox_attrs.("waypoints", status[:autopilot][:mode] == :waypoints)), "Waypoints", Html.br(),
+        " Beat angle:",    Html.input([{"type", "number"},{"id", "beatangle"}, {"name", "beatangle"},{"value", status[:autopilot][:autopilot_wind_exclusion]}]) <> "&#176;",
+        " Max deviation:", Html.input([{"type", "number"},{"id", "maxdev"},    {"name", "maxdev"},   {"value", status[:autopilot][:waypoints_max_lateral_deviation] |> Util.m_to_nm() |> Float.round(1)}]) <> "nm",
+        Html.br(),
         Html.input([{"type", "submit"}, {"value", "Set autopilot"}])
       ]
       |> Enum.join("")
