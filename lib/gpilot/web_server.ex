@@ -31,6 +31,7 @@ defmodule Gpilot.WebServer do
       {"/waypoint/:key/upload", Gpilot.Web.WaypointUpload, []},
       {"/waypoint/:key", Gpilot.Web.Waypoint, []},
       {"/autopilot/:key", Gpilot.Web.Autopilot, []},
+      {"/gates/:key", Gpilot.Web.Gates, []},
     ]
     dispatch = :cowboy_router.compile([{:_, routes}])
     :cowboy.start_clear(__MODULE__, [port: http_port], %{env: %{dispatch: dispatch}})

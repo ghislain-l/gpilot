@@ -52,7 +52,7 @@ defmodule Gpilot.Web.Html do
     for {k,v} <- attrs do
       "#{k}=\"#{v}\""
     end
-    |> Enum.join(", ")
+    |> Enum.join(" ")
   end
 
   def div(content, attrs\\[])

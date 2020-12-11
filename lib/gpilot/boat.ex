@@ -51,11 +51,15 @@ defmodule Gpilot.Boat do
     GenServer.cast(boat_name(key), {:set_autopilot, params})
   end
 
+  def set_gates_ordering(key, ordering) when is_list(ordering) do
+    GenServer.cast(boat_name(key), {:set_gates_ordering, ordering})
+  end
+
   defmodule State do
     defstruct [
       key: nil,
       status: %{},
-      boat_type: nil,
+      race_info: nil,
       waypoints: [],
       waypoints_lateral_deviation: 0.0, # in m
       waypoints_max_lateral_deviation: Util.nm_to_m(10.0), # in m
@@ -63,6 +67,7 @@ defmodule Gpilot.Boat do
       autopilot: nil, # nil, :waypoints, :wind
       wind_angle: 90.0,
       waypoint_ref: nil,
+      gates_ordering: nil,
     ]
   end
 
@@ -77,6 +82,7 @@ defmodule Gpilot.Boat do
       wind_angle: Map.get(data, :wind_angle, 90.0),
       autopilot_wind_exclusion: Map.get(data, :autopilot_wind_exclusion, 45.0),
       waypoints_max_lateral_deviation: Map.get(data, :waypoints_max_lateral_deviation, Util.nm_to_m(10.0)),
+      gates_ordering: Map.get(data, :gates_ordering, nil),
     }}
   end
 
@@ -84,7 +90,9 @@ defmodule Gpilot.Boat do
   def handle_call(:get, _from, state) do
     ret =
       state.status
-      |> Map.put("boatType", state.boat_type)
+      |> Map.put("boatType", state.race_info["boatType"])
+      |> Map.put(:gates, state |> extract_gates())
+      |> Map.put(:next_gate, state |> extract_next_gate())
       |> Map.put(:autopilot, %{
         waypoints:  state.waypoints,
         mode:       state.autopilot,
@@ -132,6 +140,17 @@ defmodule Gpilot.Boat do
         {:noreply, state}
     end
   end
+  def handle_cast({:set_gates_ordering, ordering}, state) do
+    if is_list(ordering) && length(ordering) == length(state |> extract_gates()) do
+      {:noreply, %State{state|
+        gates_ordering: ordering
+      }
+      |> save()
+      }
+    else
+      {:noreply, state}
+    end
+  end
   def handle_cast(:stop, state) do
     {:stop, :normal, state}
   end
@@ -140,7 +159,7 @@ defmodule Gpilot.Boat do
   def handle_info(:query_status, state) do
     Process.send_after(self(), :query_status, 1000*(54+:rand.uniform(11)))
     new_status = get_new_status(state.key)
-    if is_nil(state.boat_type) && not is_nil(new_status["race"]) do
+    if is_nil(state.race_info) && not is_nil(new_status["race"]) do
       send(self(), :query_race)
     end
     {:noreply, %State{state|
@@ -151,7 +170,7 @@ defmodule Gpilot.Boat do
   end
   def handle_info(:query_race, state) do
     {:noreply, %State{state|
-      boat_type: get_boat_type(state.status["race"])
+      race_info: get_race_info(state.status["race"])
     }}
   end
   def handle_info({:next_waypoint_time, t}, state) do
@@ -176,6 +195,30 @@ defmodule Gpilot.Boat do
     {:via, Registry, {Gpilot.Registry, key}}
   end
 
+  # return list of tuples {{N, W, S, E}, ordering}
+  defp extract_gates(state) do
+    gates = 
+      state.race_info["waypoints"]
+      |> Enum.map(&({&1["maxLat"], &1["maxLon"], &1["minLat"], &1["minLon"]}))
+    case {gates, state.gates_ordering} do
+      {[],_} -> []
+      {_, nil} -> Enum.with_index(gates)
+      {g, o} -> Enum.zip(g, o)
+    end
+  end
+  defp extract_next_gate(state) do
+    # format boxes as {N, W, S, E} coordinates
+    gates =
+      state
+      |> extract_gates()
+      |> Enum.sort(fn {_x, i},{_y, j} -> i<=j end)
+      |> Enum.map(fn {x, _i} -> x end)
+    finish = [state.race_info] |> Enum.map(&({&1["finishMaxLat"],&1["finishMaxLon"],&1["finishMinLat"],&1["finishMinLon"]})) # always last
+    (gates ++ finish)
+    |> Enum.drop(state.status["waypointsReached"])
+    |> Enum.take(1)
+  end
+
   defp get_new_status(key) do
     (@boat_url <> key)
     |> to_charlist()
@@ -183,12 +226,11 @@ defmodule Gpilot.Boat do
     |> parse_reply()
   end
 
-  defp get_boat_type(race_id) do
+  defp get_race_info(race_id) do
     (@race_url <> race_id)
     |> to_charlist()
     |> :httpc.request()
     |> parse_reply()
-    |> Map.get("boatType")
   end
 
   defp parse_reply({:ok, {{_, 200, _}, _, json}}) do
@@ -299,6 +341,7 @@ defmodule Gpilot.Boat do
         wind_angle: state.wind_angle,
         autopilot_wind_exclusion: state.autopilot_wind_exclusion,
         waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
+        gates_ordering: state.gates_ordering,
       }
     Gpilot.Store.set_boat(state.key, data)
     state
@@ -331,7 +374,7 @@ defmodule Gpilot.Boat do
     end
   end
 
-  defp trace(data, label) do
+  defp trace(data, _label) do
     data
     #|> IO.inspect(label: label)
   end

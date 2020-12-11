@@ -44,6 +44,40 @@ defmodule Gpilot.Web.Boat do
       c = document.getElementById("w_lon_"+i);
       c.value = "";
     }
+    function expand_gates() {
+      c = document.getElementById("next_gate");
+      c.style.display="none";
+      c = document.getElementById("gates_div");
+      c.style.display="initial";
+    }
+    function gate_up(button) {
+      current_row = button.parentNode.parentNode;
+      prev_row = current_row.previousElementSibling;
+      if(prev_row) {
+        tbody = current_row.parentNode;
+        tbody.replaceChild(prev_row, current_row);
+        tbody.insertBefore(current_row, prev_row);
+      }
+    }
+    function gate_down(button) {
+      current_row = button.parentNode.parentNode;
+      next_row = current_row.nextElementSibling;
+      if(next_row) {
+        tbody = current_row.parentNode;
+        tbody.replaceChild(current_row, next_row);
+        tbody.insertBefore(next_row, current_row);
+      }
+    }
+    function submit_ordering() {
+      rows = document.getElementById("gates_table").rows;
+      payload = "ordering";
+      for(r of rows) {
+        payload += "-" + r.firstElementChild.firstChild.textContent.trim();
+      }
+      console.log(payload);
+      document.getElementById("ordering").value = payload;
+
+    }
     """
   end
 
@@ -52,6 +86,7 @@ defmodule Gpilot.Web.Boat do
       render_wind_graph(status, key),
       render_status(status, key),
       render_action(status, key),
+      render_gates(status, key),
       render_waypoints(status, key),
       render_footer(status, key),
     ]
@@ -60,7 +95,7 @@ defmodule Gpilot.Web.Boat do
 
   defp render_status(status, _key) do
     [
-      [Html.b("Position"), "#{Float.round(status["lat"],4)}&#176;,#{Float.round(status["lon"],4)}&#176;"],
+      [Html.b("Position"), "#{show_coord(status["lat"])},#{show_coord(status["lon"])}"],
       [Html.b("Wind"),     "#{round(status["windDir"])}&#176; @ #{status["windSpeed"] |> Util.ms_to_kts()} kts with #{Html.b("gust")} @ #{status["windGust"] |> Util.ms_to_kts()} kts"],
       [Html.b("Current"),
         (if status["oceanCurrentDir"] && status["oceanCurrentSpeed"] do
@@ -81,6 +116,48 @@ defmodule Gpilot.Web.Boat do
     <> Html.input([{"type", "submit"},{"value", "Change course"}])
     )
     |> Html.form(method: "POST", action: "/course/#{key}")
+  end
+
+  defp render_gates(status, key) do
+    next_gate =
+      case status[:next_gate] do
+        [{north, east, south, west}] ->
+          [
+            [Html.b("Next gate"), Html.button("see all", [{"onclick", "expand_gates();"}])],
+            ["", "N: #{show_coord(north)}", ""],
+            ["W: #{show_coord(west)}", "", "E: #{show_coord(east)}"],
+            ["", "S: #{show_coord(south)}", ""],
+          ]
+          |> Html.table([{"id", "next_gate"}])
+        _ ->
+          ""
+      end
+    all_gates =
+      [
+        status[:gates]
+        |> Enum.with_index() # ordering of the race data
+        |> Enum.sort(fn {{_,i},_},{{_,j},_} -> i<=j end) # sort according to user setting
+        |> Enum.reduce([], fn {{{north, east, south, west},_},i}, acc -> # i is the index in the race data
+          acc ++
+          [
+            [
+              {"#{i}", [{"style", "display:none"}]},
+              "N: #{show_coord(north)}", "S: #{show_coord(south)}", "W: #{show_coord(west)}", "E: #{show_coord(east)}",
+              Html.button("up", [{"onclick", "gate_up(this);"}]),
+              Html.button("down", [{"onclick", "gate_down(this);"}])
+            ]
+          ]
+        end)
+        |> Html.table([{"id", "gates_table"}]),
+        (  Html.input([{"id", "ordering"},{"name", "ordering"}, {"type", "hidden"}])
+        <> Html.input([{"type", "submit"},{"value", "Submit ordering"},{"onclick", "submit_ordering();"}])
+        )
+        |> Html.form(method: "POST", action: "/gates/#{key}")
+
+      ]
+      |> Html.div([{"id", "gates_div"}, {"style", "display:none;"}])
+        
+    next_gate <> all_gates
   end
 
   defp render_wind_graph(status, _key) do
@@ -216,4 +293,10 @@ defmodule Gpilot.Web.Boat do
     |> Enum.join("")
     |> Html.div()
   end
+
+  # show coordinates with rounding (and safe if not a number)
+  defp show_coord(lat_or_lon) when is_float(lat_or_lon),   do: "#{Float.round(lat_or_lon, 4)}&#176;"
+  defp show_coord(lat_or_lon) when is_integer(lat_or_lon), do: "#{lat_or_lon}.0&#176;"
+  defp show_coord(_lat_or_lon), do: "N/A"
+
 end
