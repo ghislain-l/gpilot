@@ -16,7 +16,7 @@ defmodule Gpilot.Boat do
 
   @boat_url   "https://8bitbyte.ca/sailnavsim/api/boatinfo.php?key="
   @race_url   "https://8bitbyte.ca/sailnavsim/api/raceinfo.php?id="
-  @action_url "https://8bitbyte.ca/sailnavsim/?key="
+  @action_url "https://8bitbyte.ca/sailnavsim/api/boatcmd.php?key="
 
   def start_link(key) do
     GenServer.start_link(__MODULE__, key, [name: boat_name(key)])
