@@ -22,7 +22,7 @@ defmodule Gpilot.Web.Course do
          {h, ""} <- Integer.parse(v),
          :ok <- Gpilot.Boat.change_course(key, h)
     do
-      headers = %{"Location" => "/boat/#{key}"}
+      headers = %{"Location" => "../boat/#{key}"}
       req = :cowboy_req.reply(303, headers, <<>>, req)
       {:ok, req, opts}
     else
