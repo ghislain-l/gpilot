@@ -115,7 +115,7 @@ defmodule Gpilot.Web.Boat do
     <> Html.input([{"id", "value"},{"name", "value"},{"type", "number"},{"value", status["courseWater"]}]) <> "&#176;<br>"
     <> Html.input([{"type", "submit"},{"value", "Change course"}])
     )
-    |> Html.form(method: "POST", action: "/course/#{key}")
+    |> Html.form(method: "POST", action: "../course/#{key}")
   end
 
   defp render_gates(status, key) do
@@ -152,7 +152,7 @@ defmodule Gpilot.Web.Boat do
         (  Html.input([{"id", "ordering"},{"name", "ordering"}, {"type", "hidden"}])
         <> Html.input([{"type", "submit"},{"value", "Submit ordering"},{"onclick", "submit_ordering();"}])
         )
-        |> Html.form(method: "POST", action: "/gates/#{key}")
+        |> Html.form(method: "POST", action: "../gates/#{key}")
 
       ]
       |> Html.div([{"id", "gates_div"}, {"style", "display:none;"}])
@@ -179,7 +179,7 @@ defmodule Gpilot.Web.Boat do
         Html.input([{"type", "submit"},{"value", "Set waypoints"}]),
       ]
       |> Html.div()
-      |> Html.form(method: "POST", action: "/waypoint/#{key}")
+      |> Html.form(method: "POST", action: "../waypoint/#{key}")
 
     checkbox_attrs =
       fn value,checked ->
@@ -202,7 +202,7 @@ defmodule Gpilot.Web.Boat do
         Html.input([{"type", "submit"}, {"value", "Set autopilot"}])
       ]
       |> Enum.join("")
-      |> Html.form(method: "POST", action: "/autopilot/#{key}")
+      |> Html.form(method: "POST", action: "../autopilot/#{key}")
 
     upload =
       [
@@ -210,7 +210,7 @@ defmodule Gpilot.Web.Boat do
         Html.input([{"type", "submit"}, {"value", "Upload GPX"}])
       ]
       |> Enum.join("")
-      |> Html.form(method: "POST", action: "/waypoint/#{key}/upload", enctype: "multipart/form-data")
+      |> Html.form(method: "POST", action: "../waypoint/#{key}/upload", enctype: "multipart/form-data")
 
     [
       Html.h2("Autopilot"),

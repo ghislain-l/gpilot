@@ -21,7 +21,7 @@ defmodule Gpilot.Web.Waypoint do
          waypoints <- parse_waypoints(body)
     do
       Gpilot.Boat.set_waypoints(key, waypoints)
-      {:ok, :cowboy_req.reply(303, %{"Location" => "/boat/#{key}"}, "", req), opts}
+      {:ok, :cowboy_req.reply(303, %{"Location" => "../boat/#{key}"}, "", req), opts}
     else
       _other ->
         headers = %{"content-type" => "text/html"}

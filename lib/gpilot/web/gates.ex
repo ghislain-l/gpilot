@@ -28,7 +28,7 @@ defmodule Gpilot.Web.Gates do
         |> Enum.sort(fn {i,_},{j,_} -> i<=j end)
         |> Enum.map(fn {_,x} -> x end)
       Gpilot.Boat.set_gates_ordering(key, gates_ordering)
-      {:ok, :cowboy_req.reply(303, %{"Location" => "/boat/#{key}"}, "", req), opts}
+      {:ok, :cowboy_req.reply(303, %{"Location" => "../boat/#{key}"}, "", req), opts}
     else
       _other ->
         headers = %{"content-type" => "text/html"}
