@@ -38,34 +38,31 @@ defmodule Gpilot.Wind do
   def svg_graph(boat_type, wind_dir, wind_speed, angle) do
 
     """
-    <svg width="800" height="800" id="wind_graph">
-      <circle cx="400" cy="400" r="400" stroke="white" stroke-width="1" fill="dodgerblue" />
-      <circle cx="400" cy="400" r="350" stroke="white" stroke-width="1" fill="deepskyblue" />
-      <circle cx="400" cy="400" r="300" stroke="white" stroke-width="1" fill="dodgerblue" />
-      <circle cx="400" cy="400" r="250" stroke="white" stroke-width="1" fill="deepskyblue" />
-      <circle cx="400" cy="400" r="200" stroke="white" stroke-width="1" fill="dodgerblue" />
-      <circle cx="400" cy="400" r="150" stroke="white" stroke-width="1" fill="deepskyblue" />
-      <circle cx="400" cy="400" r="100" stroke="white" stroke-width="1" fill="dodgerblue" />
-      <circle cx="400" cy="400" r="50"  stroke="white" stroke-width="1" fill="deepskyblue" />
-      <circle cx="400" cy="400" r="1"   stroke="white" stroke-width="1" fill="black" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(  0 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 10 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 20 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 30 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 40 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 50 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 60 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 70 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 80 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate( 90 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(100 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(110 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(120 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(130 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(140 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(150 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(160 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      <line x1="400" y1="800" x2="400" y2="0"   transform="rotate(170 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+    <svg width="500" height="500" id="wind_graph">
+      <circle cx="250" cy="250" r="250" stroke="white" stroke-width="1" fill="deepskyblue" />
+      <circle cx="250" cy="250" r="200" stroke="white" stroke-width="1" fill="dodgerblue" />
+      <circle cx="250" cy="250" r="150" stroke="white" stroke-width="1" fill="deepskyblue" />
+      <circle cx="250" cy="250" r="100" stroke="white" stroke-width="1" fill="dodgerblue" />
+      <circle cx="250" cy="250" r="50"  stroke="white" stroke-width="1" fill="deepskyblue" />
+      <circle cx="250" cy="250" r="1"   stroke="white" stroke-width="1" fill="black" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(  0 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 10 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 20 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 30 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 40 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 50 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 60 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 70 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 80 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 90 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(100 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(110 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(120 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(130 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(140 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(150 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(160 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
+      <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(170 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
       #{wind_response_path(boat_type, wind_dir, wind_speed, angle)}
     </svg>
     """
@@ -73,19 +70,35 @@ defmodule Gpilot.Wind do
 
   defp wind_response_path(boat_type, wind_dir, wind_speed, angle) do
     {wind_response, angles} = get_response(boat_type, wind_dir, wind_speed)
+    {_,m} = Enum.max_by(wind_response, fn {_,s} -> s end, fn -> {0,1.0} end)
+    scale =
+      case Util.ms_to_kts(m) do
+        kts when kts <= 4.5 ->
+          50
+        kts when kts <= 9.0 ->
+          25
+        kts when kts <= 24.0 ->
+          10
+        _ ->
+          5
+      end
+    scale_text =
+      """
+      <text x="350" y="500" fill="black">#{round(50/scale)} kts/div</text>
+      """
     wr_path =
       wind_response
       |> Enum.map(fn {d,s} ->
         s = Util.ms_to_kts(s)
-        x = 10*s*:math.sin(d/180*:math.pi())
-        y = 10*s*:math.cos(d/180*:math.pi())
-        "L#{400+round(x)} #{400-round(y)}" 
+        x = scale*s*:math.sin(d/180*:math.pi())
+        y = scale*s*:math.cos(d/180*:math.pi())
+        "L#{250+round(x)} #{250-round(y)}" 
       end)
       |> Enum.join(" ")
     angles_text =
       for a <- angles do
         """
-        <text x="#{400+round(375*Util.sin(a))}" y="#{400-round(375*Util.cos(a))}" fill="black">#{round(a)}</text>
+        <text x="#{250+round(225*Util.sin(a))}" y="#{250-round(225*Util.cos(a))}" fill="black">#{round(a)}</text>
         """
       end
     vmg =
@@ -99,10 +112,10 @@ defmodule Gpilot.Wind do
               acc
             end
           end)
-        s = 10*Util.ms_to_kts(vmg_speed)
+        s = scale*Util.ms_to_kts(vmg_speed)
         """
-        <text x="#{400+round(s*Util.sin(vmg_dir))}" y="#{400-round(s*Util.cos(vmg_dir))}" fill="black">#{round(Util.normalize_angle(vmg_dir))}</text>
-        <line x1="0" y1="#{round(399-s)}" x2="800" y2="#{round(399-s)}" transform="rotate(#{round(angle)} 400,400)" style="stroke:rgb(0,0,0);stroke-width:1" />
+        <text x="#{250+round(s*Util.sin(vmg_dir))}" y="#{250-round(s*Util.cos(vmg_dir))}" fill="black">#{round(Util.normalize_angle(vmg_dir))}</text>
+        <line x1="0" y1="#{round(249-s)}" x2="500" y2="#{round(249-s)}" transform="rotate(#{round(angle)} 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
         """
       else
         ""
@@ -110,8 +123,9 @@ defmodule Gpilot.Wind do
 
     """
     #{angles_text}
-    <path d="M400 400 #{wr_path}" fill="none" stroke="red"/>
+    <path d="M250 250 #{wr_path}" fill="none" stroke="red"/>
     #{vmg}
+    #{scale_text}
     """
   end
 
