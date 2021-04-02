@@ -1,4 +1,4 @@
-# Copyright (C) 2020 ghislain-l <ghislain.lemaur@gmail.com>
+# Copyright (C) 2020-2021 ghislain-l <ghislain.lemaur@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published by
@@ -63,7 +63,8 @@ defmodule Gpilot.Boat do
       waypoints: [],
       waypoints_lateral_deviation: 0.0, # in m
       waypoints_max_lateral_deviation: Util.nm_to_m(10.0), # in m
-      autopilot_wind_exclusion: 45.0, # minimum angle to the wind when following waypoints (beat angle)
+      autopilot_beatangle1: 45.0,
+      autopilot_beatangle2: 180.0,
       autopilot: nil, # nil, :waypoints, :wind
       wind_angle: 90.0,
       waypoint_ref: nil,
@@ -80,7 +81,8 @@ defmodule Gpilot.Boat do
       waypoints:  Map.get(data, :waypoints, []),
       autopilot:  Map.get(data, :autopilot, nil),
       wind_angle: Map.get(data, :wind_angle, 90.0),
-      autopilot_wind_exclusion: Map.get(data, :autopilot_wind_exclusion, 45.0),
+      autopilot_beatangle1: Map.get(data, :autopilot_beatangle1, 45.0),
+      autopilot_beatangle2: Map.get(data, :autopilot_beatangle2, 180.0),
       waypoints_max_lateral_deviation: Map.get(data, :waypoints_max_lateral_deviation, Util.nm_to_m(10.0)),
       gates_ordering: Map.get(data, :gates_ordering, nil),
     }}
@@ -97,7 +99,8 @@ defmodule Gpilot.Boat do
         waypoints:  state.waypoints,
         mode:       state.autopilot,
         wind_angle: state.wind_angle,
-        autopilot_wind_exclusion: state.autopilot_wind_exclusion,
+        autopilot_beatangle1: state.autopilot_beatangle1,
+        autopilot_beatangle2: state.autopilot_beatangle2,
         waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
         })
     {:reply, ret, state}
@@ -125,12 +128,13 @@ defmodule Gpilot.Boat do
   end
   def handle_cast({:set_autopilot, params}, state) do
     case validate_autopilot(params) do
-      {:ok, mode, angle, beat_angle, max_dev} ->
+      {:ok, mode, angle, beatangle1, beatangle2, max_dev} ->
         {:noreply, %State{state|
           autopilot:  mode,
           wind_angle: angle,
           waypoints_max_lateral_deviation: Util.nm_to_m(max_dev),
-          autopilot_wind_exclusion: beat_angle,
+          autopilot_beatangle1: beatangle1,
+          autopilot_beatangle2: beatangle2,
           waypoints_lateral_deviation: 0.0,
         }
         |> save()
@@ -287,30 +291,41 @@ defmodule Gpilot.Boat do
         lateral_deviation = state.waypoints_lateral_deviation + 60*Util.sin(state.status["trackGround"]-course_to_waypoint)*state.status["speedGround"]
         # find the best course to the waypoint
         desired_course = course_to_waypoint - (state.status["trackGround"]-state.status["courseWater"])
-        # exclusion zone
-        left  = state.status["windDir"] - state.autopilot_wind_exclusion
-        right = state.status["windDir"] + state.autopilot_wind_exclusion
-        going_right? = Util.sin( state.status["courseWater"] - course_to_waypoint) > 0
+
+        # beating zones
+        upwind   = [state.status["windDir"] - state.autopilot_beatangle1, state.status["windDir"] + state.autopilot_beatangle1]
+        downwind = [state.status["windDir"] + state.autopilot_beatangle2, state.status["windDir"] - state.autopilot_beatangle2]
+
+        compute_tack =
+          fn [left, right] ->
+            cond do
+              lateral_deviation > state.waypoints_max_lateral_deviation ->
+                # too much to the right
+                left
+              lateral_deviation < -state.waypoints_max_lateral_deviation ->
+                # too much to the left
+                right
+              true ->
+                # continue on a heading closest to what we are now
+                [l,r] = [left, right] |> Enum.map(&(Util.cos(&1-state.status["courseWater"])))
+                if l > r do
+                  left
+                else
+                  right
+                end
+            end
+          end
+
         new_course =
           cond do
-            # can go directly to waypoint
-            not Util.angle_in_interval?([left, right], desired_course) ->
-              desired_course
-            # must tack according to wind
-            lateral_deviation > state.waypoints_max_lateral_deviation ->
-              # too much to the right
-              left
-            lateral_deviation < -state.waypoints_max_lateral_deviation ->
-              # too much to the left
-              right
+            Util.angle_in_interval?(upwind, desired_course) ->
+              compute_tack.(upwind)
+            Util.angle_in_interval?(downwind, desired_course) ->
+              compute_tack.(downwind)
             true ->
-              # continue on a heading closest to what we are now
-              if going_right? do
-                right
-              else
-                left
-              end
+              desired_course
           end
+
         %State{state|
           waypoints_lateral_deviation: lateral_deviation
         }
@@ -339,7 +354,8 @@ defmodule Gpilot.Boat do
         waypoints: state.waypoints,
         autopilot: state.autopilot,
         wind_angle: state.wind_angle,
-        autopilot_wind_exclusion: state.autopilot_wind_exclusion,
+        autopilot_beatangle1: state.autopilot_beatangle1,
+        autopilot_beatangle2: state.autopilot_beatangle2,
         waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
         gates_ordering: state.gates_ordering,
       }
@@ -364,11 +380,11 @@ defmodule Gpilot.Boat do
         "waypoints" -> :waypoints
         _ -> nil
       end
-    ["windangle", "beatangle", "maxdev"]
+    ["windangle", "beatangle1", "beatangle2", "maxdev"]
     |> Enum.map(&(Map.get(map, &1, "") |> Float.parse()))
     |> case do
-      [{wa,""},{ba,""},{md,""}] ->
-        {:ok, m, wa, ba, md}
+      [{wa,""},{ba1,""},{ba2,""},{md,""}] ->
+        {:ok, m, wa, ba1, ba2, md}
       _ ->
         :error
     end

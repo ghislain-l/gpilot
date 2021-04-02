@@ -1,4 +1,4 @@
-# Copyright (C) 2020 ghislain-l <ghislain.lemaur@gmail.com>
+# Copyright (C) 2020-2021 ghislain-l <ghislain.lemaur@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published by
@@ -196,7 +196,9 @@ defmodule Gpilot.Web.Boat do
         Html.input(checkbox_attrs.("wind",      status[:autopilot][:mode] == :wind)),      "Wind",
         " angle:",Html.input([{"type", "number"},{"id", "windangle"}, {"name", "windangle"},{"value",status[:autopilot][:wind_angle]}]) <> "&#176;", Html.br(),
         Html.input(checkbox_attrs.("waypoints", status[:autopilot][:mode] == :waypoints)), "Waypoints", Html.br(),
-        " Beat angle:",    Html.input([{"type", "number"},{"id", "beatangle"}, {"name", "beatangle"},{"value", status[:autopilot][:autopilot_wind_exclusion]}]) <> "&#176;",
+        " Beat angles:", Html.br(),
+        " Upwind: ", Html.input([{"type", "number"},{"id", "beatangle1"}, {"name", "beatangle1"},{"value", status[:autopilot][:autopilot_beatangle1]}]) <> "&#176;", Html.br(),
+        " Downwind: ", Html.input([{"type", "number"},{"id", "beatangle2"}, {"name", "beatangle2"},{"value", status[:autopilot][:autopilot_beatangle2]}]) <> "&#176;", Html.br(),
         " Max deviation:", Html.input([{"type", "number"},{"id", "maxdev"},    {"name", "maxdev"},   {"value", status[:autopilot][:waypoints_max_lateral_deviation] |> Util.m_to_nm() |> Float.round(1)}]) <> "nm",
         Html.br(),
         Html.input([{"type", "submit"}, {"value", "Set autopilot"}])
