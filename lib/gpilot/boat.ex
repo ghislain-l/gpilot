@@ -65,6 +65,7 @@ defmodule Gpilot.Boat do
       waypoints_max_lateral_deviation: Util.nm_to_m(10.0), # in m
       autopilot_beatangle1: 45.0,
       autopilot_beatangle2: 180.0,
+      autopilot_vmg: false,
       autopilot: nil, # nil, :waypoints, :wind
       wind_angle: 90.0,
       waypoint_ref: nil,
@@ -81,6 +82,7 @@ defmodule Gpilot.Boat do
       waypoints:  Map.get(data, :waypoints, []),
       autopilot:  Map.get(data, :autopilot, nil),
       wind_angle: Map.get(data, :wind_angle, 90.0),
+      autopilot_vmg: Map.get(data, :autopilot_vmg, false),
       autopilot_beatangle1: Map.get(data, :autopilot_beatangle1, 45.0),
       autopilot_beatangle2: Map.get(data, :autopilot_beatangle2, 180.0),
       waypoints_max_lateral_deviation: Map.get(data, :waypoints_max_lateral_deviation, Util.nm_to_m(10.0)),
@@ -99,6 +101,7 @@ defmodule Gpilot.Boat do
         waypoints:  state.waypoints,
         mode:       state.autopilot,
         wind_angle: state.wind_angle,
+        autopilot_vmg: state.autopilot_vmg,
         autopilot_beatangle1: state.autopilot_beatangle1,
         autopilot_beatangle2: state.autopilot_beatangle2,
         waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
@@ -128,11 +131,12 @@ defmodule Gpilot.Boat do
   end
   def handle_cast({:set_autopilot, params}, state) do
     case validate_autopilot(params) do
-      {:ok, mode, angle, beatangle1, beatangle2, max_dev} ->
+      {:ok, mode, angle, beatangle1, beatangle2, max_dev, vmg} ->
         {:noreply, %State{state|
           autopilot:  mode,
           wind_angle: angle,
           waypoints_max_lateral_deviation: Util.nm_to_m(max_dev),
+          autopilot_vmg: vmg,
           autopilot_beatangle1: beatangle1,
           autopilot_beatangle2: beatangle2,
           waypoints_lateral_deviation: 0.0,
@@ -318,6 +322,8 @@ defmodule Gpilot.Boat do
 
         new_course =
           cond do
+            state.autopilot_vmg == true and not is_nil(state.race_info) ->
+              Gpilot.Wind.get_vmg(state.race_info["boatType"], state.status["windDir"], state.status["windSpeed"], course_to_waypoint)
             Util.angle_in_interval?(upwind, desired_course) ->
               compute_tack.(upwind)
             Util.angle_in_interval?(downwind, desired_course) ->
@@ -380,11 +386,12 @@ defmodule Gpilot.Boat do
         "waypoints" -> :waypoints
         _ -> nil
       end
+    vmg = Map.get(map, "autopilot_vmg") == "1"
     ["windangle", "beatangle1", "beatangle2", "maxdev"]
     |> Enum.map(&(Map.get(map, &1, "") |> Float.parse()))
     |> case do
       [{wa,""},{ba1,""},{ba2,""},{md,""}] ->
-        {:ok, m, wa, ba1, ba2, md}
+        {:ok, m, wa, ba1, ba2, md, vmg}
       _ ->
         :error
     end

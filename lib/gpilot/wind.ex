@@ -68,6 +68,22 @@ defmodule Gpilot.Wind do
     """
   end
 
+  def get_vmg(boat_type, wind_dir, wind_speed, angle) do
+    {wind_response, _angles} = get_response(boat_type, wind_dir, wind_speed)
+    if is_number(angle) do
+      {vmg_dir, _vmg_speed} =
+        Enum.reduce(wind_response, {0,0.0}, fn {d,s},{_,ms}=acc ->
+          s = Util.cos(d-angle)*s # speed along the "angle" direction
+          if s > ms do
+            {d, s}
+          else
+            acc
+          end
+        end)
+      Util.normalize_angle(vmg_dir)
+    end
+  end
+
   defp wind_response_path(boat_type, wind_dir, wind_speed, angle) do
     {wind_response, angles} = get_response(boat_type, wind_dir, wind_speed)
     {_,m} = Enum.max_by(wind_response, fn {_,s} -> s end, fn -> {0,1.0} end)

@@ -196,6 +196,7 @@ defmodule Gpilot.Web.Boat do
         Html.input(checkbox_attrs.("wind",      status[:autopilot][:mode] == :wind)),      "Wind",
         " angle:",Html.input([{"type", "number"},{"id", "windangle"}, {"name", "windangle"},{"value",status[:autopilot][:wind_angle]}]) <> "&#176;", Html.br(),
         Html.input(checkbox_attrs.("waypoints", status[:autopilot][:mode] == :waypoints)), "Waypoints", Html.br(),
+        " VMG: ", Html.input([{"type", "checkbox"}, {"id", "autopilot_vmg"}, {"name", "autopilot_vmg"}, {"value", "1"}] ++ (if status[:autopilot][:autopilot_vmg], do: [{"checked", "true"}], else: [])), Html.br(),
         " Beat angles:", Html.br(),
         " Upwind: ", Html.input([{"type", "number"},{"id", "beatangle1"}, {"name", "beatangle1"},{"value", status[:autopilot][:autopilot_beatangle1]}]) <> "&#176;", Html.br(),
         " Downwind: ", Html.input([{"type", "number"},{"id", "beatangle2"}, {"name", "beatangle2"},{"value", status[:autopilot][:autopilot_beatangle2]}]) <> "&#176;", Html.br(),
