@@ -23,7 +23,7 @@ defmodule Gpilot.Web.WaypointUpload do
          {:ok, waypoints} <- extract_waypoints(data)
     do
       Gpilot.Boat.set_waypoints(key, waypoints)
-      {:ok, :cowboy_req.reply(303, %{"Location" => "../boat/#{key}"}, "", req), opts}
+      {:ok, :cowboy_req.reply(303, %{"Location" => "../../boat/#{key}"}, "", req), opts}
     else
       _ ->
         {:ok, :cowboy_req.reply(400, Html.content_type(), "Bad request\n", req), opts}
