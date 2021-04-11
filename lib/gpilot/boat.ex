@@ -274,6 +274,16 @@ defmodule Gpilot.Boat do
   end
 
   defp run_autopilot(state) do
+    try do
+      # if state is wrong, or any other reason (divide by 0...), do not crash
+      run_autopilot_unsafe(state)
+    rescue
+      other ->
+        IO.inspect(other, label: "Autopilot error")
+        state
+    end
+  end
+  defp run_autopilot_unsafe(state) do
     case {state.autopilot, state.waypoints} do
       {:wind,_} ->
         if is_number(state.wind_angle) do
@@ -360,6 +370,7 @@ defmodule Gpilot.Boat do
         waypoints: state.waypoints,
         autopilot: state.autopilot,
         wind_angle: state.wind_angle,
+        autopilot_vmg:        state.autopilot_vmg,
         autopilot_beatangle1: state.autopilot_beatangle1,
         autopilot_beatangle2: state.autopilot_beatangle2,
         waypoints_max_lateral_deviation: state.waypoints_max_lateral_deviation,
