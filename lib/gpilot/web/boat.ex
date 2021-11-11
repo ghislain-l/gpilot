@@ -96,7 +96,7 @@ defmodule Gpilot.Web.Boat do
   defp render_status(status, _key) do
     [
       [Html.b("Position"), "#{show_coord(status["lat"])},#{show_coord(status["lon"])}"],
-      [Html.b("Wind"),     "#{round(status["windDir"])}&#176; @ #{status["windSpeed"] |> Util.ms_to_kts()} kts with #{Html.b("gust")} @ #{status["windGust"] |> Util.ms_to_kts()} kts"],
+      [Html.b("Wind"),     "#{round(status["windDir"])}&#176; @ #{status["windSpeed"] |> Util.ms_to_kts()} kts with #{Html.b("gust")} @ #{status["windGustApparent"] |> Util.ms_to_kts()} kts"],
       [Html.b("Current"),
         (if status["oceanCurrentDir"] && status["oceanCurrentSpeed"] do
           "#{round(status["oceanCurrentDir"])}&#176; @ #{status["oceanCurrentSpeed"] |> Util.ms_to_kts()} kts"
@@ -168,7 +168,7 @@ defmodule Gpilot.Web.Boat do
         _ ->
           nil
       end
-    Gpilot.Wind.svg_graph(status["boatType"], status["windDir"], status["windSpeed"], angle)
+    Gpilot.Wind.svg_graph(status["boatType"], status["windDir"], status["windSpeed"], status["windGust"], angle)
     |> Html.div([{"style", "float:right"}])
   end
 

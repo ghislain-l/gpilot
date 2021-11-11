@@ -35,7 +35,7 @@ defmodule Gpilot.Wind do
   @doc """
   Generate a svg graph of wind response, with interesting angles
   """
-  def svg_graph(boat_type, wind_dir, wind_speed, angle) do
+  def svg_graph(boat_type, wind_dir, wind_speed, wind_gust, angle) do
 
     """
     <svg width="500" height="500" id="wind_graph">
@@ -63,7 +63,7 @@ defmodule Gpilot.Wind do
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(150 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(160 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(170 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      #{wind_response_path(boat_type, wind_dir, wind_speed, angle)}
+      #{wind_response_path(boat_type, wind_dir, wind_speed, wind_gust, angle)}
     </svg>
     """
   end
@@ -84,7 +84,7 @@ defmodule Gpilot.Wind do
     end
   end
 
-  defp wind_response_path(boat_type, wind_dir, wind_speed, angle) do
+  defp wind_response_path(boat_type, wind_dir, wind_speed, wind_gust, angle) do
     {wind_response, angles} = get_response(boat_type, wind_dir, wind_speed)
     {_,m} = Enum.max_by(wind_response, fn {_,s} -> s end, fn -> {0,1.0} end)
     scale =
@@ -136,8 +136,15 @@ defmodule Gpilot.Wind do
       else
         ""
       end
+    wind_gust = wind_gust |> Util.ms_to_kts()
+    gust =
+      """
+      <circle cx="#{250-round(Util.sin(wind_dir)*wind_gust*scale)}" cy="#{250+round(Util.cos(wind_dir)*wind_gust*scale)}" r="#{round(scale*45)}" stroke="green" stroke-width="1" fill="none" />
+      """
+
 
     """
+    #{gust}
     #{angles_text}
     <path d="M250 250 #{wr_path}" fill="none" stroke="red"/>
     #{vmg}
