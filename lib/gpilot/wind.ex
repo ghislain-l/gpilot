@@ -35,8 +35,18 @@ defmodule Gpilot.Wind do
   @doc """
   Generate a svg graph of wind response, with interesting angles
   """
-  def svg_graph(boat_type, wind_dir, wind_speed, wind_gust, angle) do
-
+  def svg_graph(boat_type, wind_dir, wind_speed, wind_gust, declination, angle) do
+    {dec, dec_text} =
+      if is_number(declination) do
+        {
+          declination,
+          """
+          <text x="50" y="500" fill="black">0M=#{round(declination)}T</text>
+          """
+        }
+      else
+        {0.0, ""}
+      end
     """
     <svg width="500" height="500" id="wind_graph">
       <circle cx="250" cy="250" r="250" stroke="white" stroke-width="1" fill="deepskyblue" />
@@ -45,6 +55,7 @@ defmodule Gpilot.Wind do
       <circle cx="250" cy="250" r="100" stroke="white" stroke-width="1" fill="dodgerblue" />
       <circle cx="250" cy="250" r="50"  stroke="white" stroke-width="1" fill="deepskyblue" />
       <circle cx="250" cy="250" r="1"   stroke="white" stroke-width="1" fill="black" />
+      <g transform="rotate( #{round(dec)} 250,250)">
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(  0 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 10 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate( 20 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
@@ -63,7 +74,9 @@ defmodule Gpilot.Wind do
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(150 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(160 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
       <line x1="250" y1="500" x2="250" y2="0"   transform="rotate(170 250,250)" style="stroke:rgb(0,0,0);stroke-width:1" stroke-dasharray="1,5" />
-      #{wind_response_path(boat_type, wind_dir, wind_speed, wind_gust, angle)}
+      #{wind_response_path(boat_type, wind_dir, wind_speed, wind_gust, angle && angle-dec)}
+      </g>
+      #{dec_text}
     </svg>
     """
   end

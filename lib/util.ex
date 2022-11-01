@@ -123,9 +123,12 @@ defmodule Util do
   Get the "great circle navigation" heading (shortest distance on a sphere)
   see: https://en.wikipedia.org/wiki/Great-circle_navigation
   """
-  def get_course(_from={p1,l1}, _to={p2,l2}) do
+  def get_course(_from={p1,l1}, _to={p2,l2}) when not (is_nil(p1) or is_nil(l1) or is_nil(p2) or is_nil(l2))do
     atan2( cos(p2)*sin(l2-l1) , cos(p1)*sin(p2) - sin(p1)*cos(p2)*cos(l2-l1) )
     |> normalize_angle()
+  end
+  def get_course(_,_) do
+    nil
   end
 
   @doc """

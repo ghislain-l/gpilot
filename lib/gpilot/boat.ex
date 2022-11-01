@@ -55,6 +55,10 @@ defmodule Gpilot.Boat do
     GenServer.cast(boat_name(key), {:set_gates_ordering, ordering})
   end
 
+  def set_position(key, {lat, lon, dec}) do
+    GenServer.cast(boat_name(key), {:set_position, lat, lon, dec})
+  end
+
   defmodule State do
     defstruct [
       key: nil,
@@ -159,6 +163,11 @@ defmodule Gpilot.Boat do
       {:noreply, state}
     end
   end
+  def handle_cast({:set_position, lat, lon, dec}, state) do
+    {:noreply, %State{state|
+      status: Map.merge(state.status, %{"lat" => lat, "lon" => lon, "declination" => dec})
+    }}
+  end
   def handle_cast(:stop, state) do
     {:stop, :normal, state}
   end
@@ -166,7 +175,7 @@ defmodule Gpilot.Boat do
   @impl GenServer
   def handle_info(:query_status, state) do
     Process.send_after(self(), :query_status, 1000*(54+:rand.uniform(11)))
-    new_status = get_new_status(state.key)
+    new_status = state.status |> Map.merge(get_new_status(state.key)) # keep old info if new is missing data
     if is_nil(state.race_info) && not is_nil(new_status["race"]) do
       send(self(), :query_race)
     end
@@ -223,7 +232,7 @@ defmodule Gpilot.Boat do
       |> Enum.map(fn {x, _i} -> x end)
     finish = [state.race_info] |> Enum.map(&({&1["finishMaxLat"],&1["finishMaxLon"],&1["finishMinLat"],&1["finishMinLon"]})) # always last
     (gates ++ finish)
-    |> Enum.drop(state.status["waypointsReached"])
+    |> Enum.drop(state.status["waypointsReached"]||0)
     |> Enum.take(1)
   end
 
@@ -294,17 +303,20 @@ defmodule Gpilot.Boat do
         # estimate when to turn to next waypoint (assume a direct course)
         current = {state.status["lat"], state.status["lon"]}
         report_time = state.status["time"]
-        course_to_waypoint   = Util.get_course(current, target)
+        course_to_waypoint   = Util.get_course(current, target) - (state.status["declination"] || 0)
         distance_to_waypoint = Util.get_distance(current, target)
-        speed_to_waypoint = state.status["speedGround"] |> Util.ms_to_kts()
+        # when data over ground not available, use data over water (celestial)
+        speed = state.status["speedGround"] || state.status["speedWater"] 
+        course = state.status["trackGround"] || state.status["courseWater"]
+        speed_to_waypoint = Util.ms_to_kts(speed)
         if speed_to_waypoint/60*5 > distance_to_waypoint do # next waypoint in less than 5 minutes after report
           time_of_turn = report_time + 3600*(distance_to_waypoint/speed_to_waypoint)
           send(self(), {:next_waypoint_time, time_of_turn})
         end
         # update the deviation integral
-        lateral_deviation = state.waypoints_lateral_deviation + 60*Util.sin(state.status["trackGround"]-course_to_waypoint)*state.status["speedGround"]
+        lateral_deviation = state.waypoints_lateral_deviation + 60*Util.sin(course-course_to_waypoint)*speed
         # find the best course to the waypoint
-        desired_course = course_to_waypoint - (state.status["trackGround"]-state.status["courseWater"])
+        desired_course = course_to_waypoint - (course-state.status["courseWater"])
 
         # beating zones
         upwind   = [state.status["windDir"] - state.autopilot_beatangle1, state.status["windDir"] + state.autopilot_beatangle1]

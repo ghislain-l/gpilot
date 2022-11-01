@@ -16,13 +16,25 @@ defmodule Gpilot.Web.Boat do
   alias Gpilot.Web.Html, as: Html
 
   def init(req, opts) do
+    key = :cowboy_req.binding(:key, req, "")
     case :cowboy_req.method(req) do
       "GET" ->
-        key = :cowboy_req.binding(:key, req, "")
         req = :cowboy_req.reply(200, Html.content_type(), body(key), req)
         {:ok, req, opts}
-      _ ->
-        {:stop, "bad method"}
+      "POST" ->
+        with true <- :cowboy_req.has_body(req),
+             {:ok, b, req} <- :cowboy_req.read_body(req),
+             [["lat",lat],["lon",lon],["dec",dec]] <- b |> String.split("&") |> Enum.map(&(String.split(&1, "="))),
+             [{lat,""}, {lon, ""}, {dec, ""}] <- [lat, lon, dec] |> Enum.map(&Float.parse/1)
+        do
+          Gpilot.Boat.set_position(key, {lat, lon, dec})
+          req = :cowboy_req.reply(200, Html.content_type(), body(key), req)
+          {:ok, req, opts}
+        else
+          _ ->
+            req = :cowboy_req.reply(400, %{"content-type" => "text/plain"}, "FAIL\n", req)
+            {:ok, req, opts}
+        end
     end
   end
 
@@ -93,9 +105,9 @@ defmodule Gpilot.Web.Boat do
     |> Html.div()
   end
 
-  defp render_status(status, _key) do
+  defp render_status(status, key) do
     [
-      [Html.b("Position"), "#{show_coord(status["lat"])},#{show_coord(status["lon"])}"],
+      position_box(status, key),
       [Html.b("Wind"),     "#{round(status["windDir"])}&#176; @ #{status["windSpeed"] |> Util.ms_to_kts()} kts with #{Html.b("gust")} @ #{status["windGustApparent"] |> Util.ms_to_kts()} kts"],
       [Html.b("Current"),
         (if status["oceanCurrentDir"] && status["oceanCurrentSpeed"] do
@@ -105,14 +117,36 @@ defmodule Gpilot.Web.Boat do
         end)
       ],
       [Html.b("SOW"),      "#{status["courseWater"]}&#176; @ #{status["speedWater"] |> Util.ms_to_kts()} kts"],
-      [Html.b("SOG"),      "#{round(status["trackGround"])}&#176; @ #{status["speedGround"] |> Util.ms_to_kts()} kts"],
+      [Html.b("SOG"),
+        (if status["trackGround"] && status["speedGround"] do
+          "#{round(status["trackGround"])}&#176; @ #{status["speedGround"] |> Util.ms_to_kts()} kts"
+        else
+          "N/A"
+        end)
+      ],
     ]
     |> Html.table()
   end
 
+  defp position_box(status=%{"celestialNavMode" => 1}, key) do
+    # maybe make it hidden, with a button to show it?
+    [
+      Html.b("Position"),
+      (  Html.input([{"id", "lat"},{"name", "lat"},{"value", status["lat"]},{"size", "9"}]) <> "&#176;, "
+      <> Html.input([{"id", "lon"},{"name", "lon"},{"value", status["lon"]},{"size", "9"}]) <> "&#176; dec"
+      <> Html.input([{"id", "dec"},{"name", "dec"},{"value", status["declination"]}, {"size", "4"}]) <> "&#176;"
+      <> Html.input([{"type", "submit"},{"value", "Update"}])
+      )
+      |> Html.form(method: "POST", action: "../boat/#{key}")
+    ]
+  end
+  defp position_box(status, _key) do
+    [Html.b("Position"), "#{show_coord(status["lat"])},#{show_coord(status["lon"])}"]
+  end
+
   defp render_action(status, key) do  
     (  "Course"
-    <> Html.input([{"id", "value"},{"name", "value"},{"type", "number"},{"value", status["courseWater"]}]) <> "&#176;<br>"
+    <> Html.input([{"id", "value"},{"name", "value"},{"type", "number"},{"value", round(status["courseWater"])}]) <> "&#176;<br>"
     <> Html.input([{"type", "submit"},{"value", "Change course"}])
     )
     |> Html.form(method: "POST", action: "../course/#{key}")
@@ -161,25 +195,24 @@ defmodule Gpilot.Web.Boat do
   end
 
   defp render_wind_graph(status, _key) do
-    angle =
-      case status[:autopilot][:waypoints] do
-        [tgt={_,_}|_tail] ->
-          Util.get_course({status["lat"],status["lon"]}, tgt)
-        _ ->
-          nil
-      end
-    Gpilot.Wind.svg_graph(status["boatType"], status["windDir"], status["windSpeed"], status["windGust"], angle)
+    angle = Util.get_course({status["lat"],status["lon"]}, Enum.at(status[:autopilot][:waypoints], 0))
+    Gpilot.Wind.svg_graph(status["boatType"], status["windDir"], status["windSpeed"], status["windGust"], status["declination"], angle)
     |> Html.div([{"style", "float:right"}])
   end
 
   defp render_waypoints(status, key) do
+    speed = status["speedGround"] || status["speedWater"]
     waypoints =
-      [
-        render_waypoint_list(status["speedGround"] |> Util.ms_to_kts(), {status["lat"], status["lon"]}, 0, 0, status[:autopilot][:waypoints]),
-        Html.input([{"type", "submit"},{"value", "Set waypoints"}]),
-      ]
-      |> Html.div()
-      |> Html.form(method: "POST", action: "../waypoint/#{key}")
+      if speed && status["lat"] && status["lon"] do
+        [
+          render_waypoint_list(speed |> Util.ms_to_kts(), {status["lat"], status["lon"]}, 0, 0, status[:autopilot][:waypoints]),
+          Html.input([{"type", "submit"},{"value", "Set waypoints"}]),
+        ]
+        |> Html.div()
+        |> Html.form(method: "POST", action: "../waypoint/#{key}")
+      else
+        "Not enough information"
+      end
 
     checkbox_attrs =
       fn value,checked ->
@@ -282,7 +315,11 @@ defmodule Gpilot.Web.Boat do
       Html.a("https://8bitbyte.ca/sailnavsim/?key=#{key}", "Boat page", "_blank"),
       Html.br(),
       Html.br(),
-      Html.a("https://www.windy.com/?gfs,#{Float.round(status["lat"],3)},#{Float.round(status["lon"],3)},8", "Windy", "_blank"),
+      (if status["lat"] && status["lon"] do
+        Html.a("https://www.windy.com/?gfs,#{Float.round(status["lat"],3)},#{Float.round(status["lon"],3)},8", "Windy", "_blank")
+      else
+        Html.a("https://www.windy.com/?gfs,0,0,5", "Windy", "_blank")
+      end),
       Html.br(),
       Html.br(),
       [
