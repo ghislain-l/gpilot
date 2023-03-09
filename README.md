@@ -8,8 +8,20 @@ Tested on a debian with Elixir 1.9, and Erlang 21, 22 and 23
 
 ## Install
 
+### Local Install (Debian)
+
 Clone this repo in /opt/gpilot
 Then run setup.sh to compile and install as a systemd service
+
+### Using Docker
+
+Clone this repo somewhere on our host machine.
+
+```bash
+cd <repo directory>
+docker build gpilot . 
+docker run -p 8080:8080 gpilot
+```
 
 ## Configuration
 
@@ -27,18 +39,15 @@ Description of available runtime options:
 
 You can start/stop the monitoring of an existing boat by
 visiting
-- your_host_ip:8080/new/your_boat_key
-- your_host_ip:8080/del/your_boat_key
+- http://localhost:8080/new/your_boat_key
+- http://localhost:8080/del/your_boat_key
 
 If, for any reason, the service is restarted, the list of boat process is persisted and all restarts automatically.
 If you want to clear all data, remove /opt/gpilot/database.ets when the service is stopped.
 
 ## Controlling a boat
 
-After the process is started, the boat page is available at
-```
-your_host_ip:8080/boat/your_boat_key
-```
+After the process is started, the boat page is available at `http://localhost:8080/boat/your_boat_key`
 
 where you will see the position, a wind graph with the latest wind data.
 On the wind graph, 6 angles are displayed:
